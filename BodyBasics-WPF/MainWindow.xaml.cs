@@ -156,6 +156,10 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
         private Boolean flag = false;
 
+        private List<Point> pointList;
+
+        private List<List<Point>> pointListList;
+
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
         /// </summary>
@@ -246,6 +250,11 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
             // initialize the components (controls) of the window
             this.InitializeComponent();
+
+            pointList = new List<Point>();
+
+            pointListList = new List<List<Point>>();
+
         }
 
         /// <summary>
@@ -403,7 +412,24 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                             //アフロにしたい
                             //                            dc.DrawEllipse(this.handClosedBrush, null, jointPoints[JointType.Head], rAhuro, rAhuro);
-                            if( body.HandRightState != HandState.NotTracked
+
+
+                            // 条件を満たしたとき pointListに追加する
+                            if (pointList.Count > 0 && body.HandRightState == HandState.Closed)
+                            {
+                                Point tmpPoint = jointPoints[JointType.HandRight];
+                                Point lastPoint = pointList[pointList.Count-1];
+
+                                if ( Math.Abs( tmpPoint.X - lastPoint.X ) > 10 
+                                    || Math.Abs( tmpPoint.Y - lastPoint.Y ) > 10 )
+                                {
+                                    pointList.Add(tmpPoint);
+                                }
+
+
+                            }
+
+                            if ( body.HandRightState != HandState.NotTracked
                                 && body.HandRightState != HandState.Unknown
                                 && tmpHandState != body.HandRightState)
                             {
@@ -419,6 +445,12 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                     controlState = ControlState.Start;
                                     startPoint = jointPoints[JointType.HandRight];
 
+                                    // りすとをインスタンス化
+                                    pointList = new List<Point>();
+
+                                    pointList.Add(startPoint);
+
+
                                 } else if ( tmpHandState == HandState.Closed )
                                 {
                                     //閉じた手だったのがそれ以外に変わった瞬間
@@ -431,16 +463,22 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                     Console.WriteLine(str);
                                     controlState = ControlState.None;
                                     endPoint = jointPoints[JointType.HandRight];
+
+                                    pointList.Add(endPoint);
+
                                 } 
 
                             }
+                            
+                            /* 線の描画 */
+                            Pen pen = new Pen(Brushes.White, 10);
 
-                            if ( flag )
+                            for( int i=0; i<pointList.Count-1; i++ )
                             {
-                                Pen pen = new Pen(Brushes.White, 10);
-
-                                dc.DrawLine(pen, startPoint, endPoint);
-                            }
+                                Point lineStartPoint = pointList[i];
+                                Point lineEndPoint = pointList[i + 1];
+                                dc.DrawLine(pen, lineStartPoint, lineEndPoint);
+                            };
 
                             //if ( body.HandRightState != HandState.NotTracked
                             //    && body.HandRightState != HandState.Unknown ) {
