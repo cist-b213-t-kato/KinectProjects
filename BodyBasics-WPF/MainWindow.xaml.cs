@@ -26,7 +26,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// <summary>
         /// Radius of drawn hand circles
         /// </summary>
-        private const double HandSize = 30;
+        private const double HandSize = 10;
 
         /// <summary>
         /// Thickness of drawn joint lines
@@ -369,6 +369,9 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             {
                 if ( colorFrame != null )
                 {
+                    if ( this.bodyColors == null )
+                    {
+                    }
                 }
             }
 
@@ -412,12 +415,12 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             this.DrawHand(body.HandLeftState, jointPoints[JointType.HandLeft], dc);
                             this.DrawHand(body.HandRightState, jointPoints[JointType.HandRight], dc);
 
-                            // クリア
-                            if ( body.HandLeftState == HandState.Closed )
-                            {
-                                pointListList = new List<List<Point>>();
-                                pointListList.Add(new List<Point>());
-                            }
+                            // クリア（全消去）する
+                            //if ( body.HandLeftState == HandState.Closed )
+                            //{
+                            //    pointListList = new List<List<Point>>();
+                            //    pointListList.Add(new List<Point>());
+                            //}
 
                             List<Point> lastPointList = pointListList[pointListList.Count-1];
 
