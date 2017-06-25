@@ -66,10 +66,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
         //アフロ
         private readonly Brush headBrush = new SolidColorBrush(Color.FromArgb(192, 64, 192, 32));
-
-        //アフロ半径
-        private int rAhuro = 0;
-
+        
         /// <summary>
         /// Brush used for drawing joints that are currently inferred
         /// </summary>        
@@ -144,7 +141,9 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         private Point endPoint;
 
         //
-        private HandState tmpHandState;
+        //private HandState tmpHandState;
+
+        private Dictionary<Body, HandState> prevHandStateDictionary;
 
         private enum ControlState {
             Start,
@@ -153,12 +152,14 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         };
 
         private ControlState controlState = ControlState.None;
-
-        private Boolean flag = false;
+        
+        private Dictionary<Body, Boolean> isRightHandClosedDictionary;
         
         private Pen pen;
 
-        private List<List<Point>> pointListList;
+        //private List<List<Point>> pointListList;
+
+        private Dictionary<Body, List<List<Point>>> bodyDrawDictionary;
 
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
@@ -255,8 +256,13 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             pen.StartLineCap = PenLineCap.Round;
             pen.EndLineCap = PenLineCap.Round;
 
-            pointListList = new List<List<Point>>();
-            pointListList.Add(new List<Point>());
+            //pointListList = new List<List<Point>>();
+            //pointListList.Add(new List<Point>());
+            bodyDrawDictionary = new Dictionary<Body, List<List<Point>>>();
+
+            isRightHandClosedDictionary = new Dictionary<Body, Boolean>();
+
+            prevHandStateDictionary = new Dictionary<Body, HandState>();
 
         }
 
@@ -389,6 +395,22 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                         if (body.IsTracked)
                         {
+
+                            if (!bodyDrawDictionary.ContainsKey(body))
+                            {
+                                List<List<Point>> newPointListList = new List<List<Point>>();
+                                newPointListList.Add(new List<Point>());
+                                bodyDrawDictionary.Add(body, newPointListList);
+                            }
+
+                            List<List<Point>> pointListList = bodyDrawDictionary[body];
+
+                            if ( pointListList.Count > 10 )
+                            {
+                                pointListList.RemoveAt(0);
+
+                            }
+
                             this.DrawClippedEdges(body, dc);
 
                             IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
@@ -424,6 +446,12 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                             List<Point> lastPointList = pointListList[pointListList.Count-1];
 
+                            // 長過ぎる線は先端から消していく
+                            if ( lastPointList.Count > 100 )
+                            {
+                                lastPointList.RemoveAt(0);
+                            }
+
                             // 条件を満たしたとき pointListに追加する
                             if (lastPointList.Count > 0 && body.HandRightState == HandState.Closed)
                             {
@@ -438,31 +466,41 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                 
                             }
 
+                            HandState prevHandState;
+
+                            if ( prevHandStateDictionary.ContainsKey(body) )
+                            {
+                                prevHandState = prevHandStateDictionary[body];
+                            } else {
+                                prevHandState = HandState.Unknown;
+                            }
+
                             if ( body.HandRightState != HandState.NotTracked
                                 && body.HandRightState != HandState.Unknown
-                                && tmpHandState != body.HandRightState)
+                                && prevHandState != body.HandRightState)
                             {
 
                                 if ( body.HandRightState == HandState.Closed )
                                 {
                                     //閉じた手に変わった瞬間
-                                    flag = false;
+                                    isRightHandClosedDictionary[body] = false;
                                     String str = "";
-                                    str += DateTime.Now.ToString() + " ";
-                                    str += "Start ";
+                                    str += " " + DateTime.Now.ToString();
+                                    str += " Start";
                                     Console.WriteLine(str);
                                     controlState = ControlState.Start;
                                     startPoint = jointPoints[JointType.HandRight];
                                     lastPointList.Add(startPoint);
 
-                                } else if ( tmpHandState == HandState.Closed )
+                                } else if (prevHandState == HandState.Closed )
                                 {
                                     //閉じた手だったのがそれ以外に変わった瞬間
-                                    flag = true;
+                                    isRightHandClosedDictionary[body] = true;
                                     String str = "";
-                                    str += DateTime.Now.ToString() + " ";
-                                    str += "End";
-                                    str += " tmpHandState:" + tmpHandState;
+                                    str += body.ToString();
+                                    str += " " + DateTime.Now.ToString();
+                                    str += " End";
+                                    str += " tmpHandState:" + prevHandState;
                                     str += " body.HandRightState: " + body.HandRightState;
                                     Console.WriteLine(str);
                                     controlState = ControlState.None;
@@ -470,7 +508,6 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                                     lastPointList.Add(endPoint);
 
-                                    // りすとをインスタンス化
                                     pointListList.Add(new List<Point>());
 
                                 } 
@@ -480,7 +517,33 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             if (body.HandRightState != HandState.Unknown
                                 && body.HandRightState != HandState.NotTracked)
                             {
-                                tmpHandState = body.HandRightState;
+                                prevHandStateDictionary[body] = body.HandRightState;
+                            }
+
+                            if ( body.HandLeftState == HandState.Lasso )
+                            {
+                                Point currentPoint = jointPoints[JointType.HandLeft];
+                                double cX = currentPoint.X;
+                                double cY = currentPoint.Y;
+
+                                for ( int j = 0; j < pointListList.Count; j++ )
+                                {
+                                    List<Point> pointList = pointListList[j];
+
+                                    for ( int i=0; i < pointList.Count-1; i++ )
+                                    {
+                                        Point prevPoint = pointList[i];
+                                        Point nextPoint = pointList[i + 1];
+                                        double dX = nextPoint.X - prevPoint.X;
+                                        double dY = nextPoint.Y - prevPoint.Y;
+                                        double d = Math.Abs( dY/dX * cX - cY );
+                                        if ( d < 100 )
+                                        {
+                                            pointListList.RemoveAt(j);
+                                            break;
+                                        }
+                                    }
+                                }
                             }
 
 
@@ -490,16 +553,20 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                     // prevent drawing outside of our render area
                     this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
                 }
-                
-                /* 線の描画 */
-                for (int j = 0; j < pointListList.Count; j++)
+
+                foreach ( KeyValuePair<Body, List<List<Point>>> pair in bodyDrawDictionary )
                 {
-                    List<Point> pointList = pointListList[j];
-                    for (int i = 0; i < pointList.Count - 1; i++)
+                    List<List<Point>> pointListList = pair.Value;
+                    /* 線の描画 */
+                    for (int j = 0; j < pointListList.Count; j++)
                     {
-                        Point lineStartPoint = pointList[i];
-                        Point lineEndPoint = pointList[i + 1];
-                        dc.DrawLine(pen, lineStartPoint, lineEndPoint);
+                        List<Point> pointList = pointListList[j];
+                        for (int i = 0; i < pointList.Count - 1; i++)
+                        {
+                            Point lineStartPoint = pointList[i];
+                            Point lineEndPoint = pointList[i + 1];
+                            dc.DrawLine(pen, lineStartPoint, lineEndPoint);
+                        }
                     }
                 }
 
