@@ -452,16 +452,12 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             if ( prevPointDictionary.ContainsKey(body) && body.HandRightState == HandState.Closed)
                             {
                                 Point prevPoint = prevPointDictionary[body];
-                                //Point tmpPoint = jointPoints[JointType.HandRight];
-                                //Point lastPoint = lastPointList[lastPointList.Count-1];
                                 Point currentPoint = jointPoints[JointType.HandRight];
-                                Console.WriteLine("prevPoint: " + prevPoint);
-                                Console.WriteLine("currentPoint: " + currentPoint);
 
                                 if ( Math.Abs( currentPoint.X - prevPoint.X ) > 10 
                                     || Math.Abs( currentPoint.Y - prevPoint.Y ) > 10 )
                                 {
-                                    Console.WriteLine("かきかき");
+                                    // Console.WriteLine("かきかき");
                                     if ( !bodyDrawDictionary.ContainsKey(body) )
                                     {
                                         bodyDrawDictionary[body] = new List<Tuple<Point, Point>>();
@@ -534,30 +530,37 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                 prevHandStateDictionary[body] = body.HandRightState;
                             }
 
-                            if ( body.HandLeftState == HandState.Lasso )
+                            if ( body.HandLeftState == HandState.Closed )
                             {
                                 Point currentPoint = jointPoints[JointType.HandLeft];
                                 double cX = currentPoint.X;
                                 double cY = currentPoint.Y;
+                                
+                                foreach (Body tmpBody in bodyDrawDictionary.Keys)
+                                {
+                                    foreach (Tuple<Point, Point> tuple in bodyDrawDictionary[tmpBody])
+                                    {
+                                        /* @see http://marupeke296.com/COL_2D_No2_PointToLine.html */
 
-                                //for ( int j = 0; j < pointListList.Count; j++ )
-                                //{
-                                //    List<Point> pointList = pointListList[j];
+                                        Point prevPoint = tuple.Item1;
+                                        Point nextPoint = tuple.Item2;
+                                        double l1 = Math.Sqrt( Math.Pow(nextPoint.X-prevPoint.X, 2) + Math.Pow(nextPoint.Y - prevPoint.Y, 2) );
+                                        double l2 = Math.Sqrt( Math.Pow(cX - prevPoint.X, 2) + Math.Pow(cY - prevPoint.Y, 2) );
 
-                                //    for ( int i=0; i < pointList.Count-1; i++ )
-                                //    {
-                                //        Point prevPoint = pointList[i];
-                                //        Point nextPoint = pointList[i + 1];
-                                //        double dX = nextPoint.X - prevPoint.X;
-                                //        double dY = nextPoint.Y - prevPoint.Y;
-                                //        double d = Math.Abs( dY/dX * cX - cY );
-                                //        if ( d < 100 )
-                                //        {
-                                //            pointListList.RemoveAt(j);
-                                //            break;
-                                //        }
-                                //    }
-                                //}
+                                        double value = (nextPoint.X - prevPoint.X) * (cX - prevPoint.X)
+                                            + (nextPoint.Y - prevPoint.Y) * (cY - prevPoint.Y);
+
+                                        if ( l1 >= l2 && Math.Abs( value - l1 * l2 ) < 10 )
+                                        {
+                                            Console.WriteLine("");
+                                            bodyDrawDictionary[tmpBody].Remove(tuple);
+                                            break;
+                                        }
+
+
+                                    }
+                                }
+
                             }
 
 
