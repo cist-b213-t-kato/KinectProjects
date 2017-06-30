@@ -401,11 +401,6 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             //List<List<Point>> pointListList = bodyDrawDictionary[body];
 
                             List<Tuple<Point, Point>> pointTupleList = new List<Tuple<Point, Point>>();
-                            
-                            //if (pointTupleList.Count > 10 )
-                            //{
-                            //    pointTupleList.RemoveAt(0);
-                            //}
 
                             this.DrawClippedEdges(body, dc);
 
@@ -454,10 +449,9 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                 Point prevPoint = prevPointDictionary[body];
                                 Point currentPoint = jointPoints[JointType.HandRight];
 
-                                if ( Math.Abs( currentPoint.X - prevPoint.X ) > 10 
-                                    || Math.Abs( currentPoint.Y - prevPoint.Y ) > 10 )
+                                if ( Math.Abs( currentPoint.X - prevPoint.X ) > 5 
+                                    || Math.Abs( currentPoint.Y - prevPoint.Y ) > 5 )
                                 {
-                                    // Console.WriteLine("かきかき");
                                     if ( !bodyDrawDictionary.ContainsKey(body) )
                                     {
                                         bodyDrawDictionary[body] = new List<Tuple<Point, Point>>();
@@ -550,7 +544,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                         double value = (nextPoint.X - prevPoint.X) * (cX - prevPoint.X)
                                             + (nextPoint.Y - prevPoint.Y) * (cY - prevPoint.Y);
 
-                                        if ( l1 >= l2 && Math.Abs( value - l1 * l2 ) < 10 )
+                                        if ( l1 >= l2 && Math.Abs( value - l1 * l2 ) < 40 )
                                         {
                                             Console.WriteLine("");
                                             bodyDrawDictionary[tmpBody].Remove(tuple);
