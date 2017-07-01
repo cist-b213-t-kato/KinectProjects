@@ -526,29 +526,65 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                             if ( body.HandLeftState == HandState.Closed )
                             {
-                                Point currentPoint = jointPoints[JointType.HandLeft];
-                                double cX = currentPoint.X;
-                                double cY = currentPoint.Y;
+                                Point cursor = jointPoints[JointType.HandLeft];
+                                double cX = cursor.X;
+                                double cY = cursor.Y;
                                 
                                 foreach (Body tmpBody in bodyDrawDictionary.Keys)
                                 {
                                     foreach (Tuple<Point, Point> tuple in bodyDrawDictionary[tmpBody])
                                     {
-                                        /* @see http://marupeke296.com/COL_2D_No2_PointToLine.html */
+                                        /* @see http://marupeke296.com/COL_2D_No5_PolygonToCircle.html */
 
                                         Point prevPoint = tuple.Item1;
                                         Point nextPoint = tuple.Item2;
-                                        double l1 = Math.Sqrt( Math.Pow(nextPoint.X-prevPoint.X, 2) + Math.Pow(nextPoint.Y - prevPoint.Y, 2) );
-                                        double l2 = Math.Sqrt( Math.Pow(cX - prevPoint.X, 2) + Math.Pow(cY - prevPoint.Y, 2) );
 
-                                        double value = (nextPoint.X - prevPoint.X) * (cX - prevPoint.X)
-                                            + (nextPoint.Y - prevPoint.Y) * (cY - prevPoint.Y);
+                                        double sX = nextPoint.X - prevPoint.X;
+                                        double sY = nextPoint.Y - prevPoint.Y;
+                                        double aX = cX - prevPoint.X;
+                                        double aY = cY - prevPoint.Y;
+                                        double bX = aX - sX;
+                                        double bY = aY - sY;
+                                        double lenS = Math.Sqrt(Math.Pow(sX, 2) + Math.Pow(sY, 2));
+                                        double crossSAAbs = Math.Abs( sX * aY - aX * sY );
+                                        double d = crossSAAbs / lenS;
 
-                                        if ( l1 >= l2 && Math.Abs( value - l1 * l2 ) < 40 )
+                                        FormattedText formattedText = new FormattedText(
+                                            ""+d, CultureInfo.GetCultureInfo("en-us"),
+                                            FlowDirection.LeftToRight,
+                                            new Typeface("Verdana"),
+                                            18,
+                                            Brushes.White);
+
+                                        dc.DrawText(formattedText, new Point(10,10));
+
+                                        double r = HandSize;
+
+                                        if (d <= r)
                                         {
-                                            Console.WriteLine("");
-                                            bodyDrawDictionary[tmpBody].Remove(tuple);
-                                            break;
+                                            double dotAS = aX * sX + aY * sY;
+                                            double dotBS = bX * sX + bY * sY;
+
+                                            if ( dotAS * dotBS <= 0 )
+                                            {
+                                                bodyDrawDictionary[tmpBody].Remove(tuple);
+                                                break;
+                                            } else {
+                                                double aLen = Math.Sqrt(Math.Pow(aX, 2) + Math.Pow(aY, 2));
+                                                if ( r > aLen )
+                                                {
+                                                    bodyDrawDictionary[tmpBody].Remove(tuple);
+                                                    break;
+                                                }
+
+                                                double bLen = Math.Sqrt(Math.Pow(bX, 2) + Math.Pow(bY, 2));
+                                                if (r > bLen)
+                                                {
+                                                    bodyDrawDictionary[tmpBody].Remove(tuple);
+                                                    break;
+                                                }
+
+                                            }
                                         }
 
 
@@ -564,22 +600,6 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                     // prevent drawing outside of our render area
                     this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
                 }
-
-                //foreach ( KeyValuePair<Body, List<List<Point>>> pair in bodyDrawDictionary )
-                //{
-                //    List<List<Point>> pointListList = pair.Value;
-                //    /* 線の描画 */
-                //    for (int j = 0; j < pointListList.Count; j++)
-                //    {
-                //        List<Point> pointList = pointListList[j];
-                //        for (int i = 0; i < pointList.Count - 1; i++)
-                //        {
-                //            Point lineStartPoint = pointList[i];
-                //            Point lineEndPoint = pointList[i + 1];
-                //            dc.DrawLine(pen, lineStartPoint, lineEndPoint);
-                //        }
-                //    }
-                //}
 
                 foreach (KeyValuePair<Body, List<Tuple<Point, Point>>> pair in bodyDrawDictionary)
                 {
@@ -744,5 +764,6 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             this.StatusText = this.kinectSensor.IsAvailable ? Properties.Resources.RunningStatusText
                                                             : Properties.Resources.SensorNotAvailableStatusText;
         }
+
     }
 }
